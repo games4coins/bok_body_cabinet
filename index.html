@@ -12,7 +12,7 @@ const status=document.getElementById('status'),VKID=window.VKIDSDK;
 const fail=e=>{console.error('VK ID error',e);status.textContent='Ошибка авторизации. Проверьте разрешённый Redirect URL в настройках VK ID и попробуйте снова.'};
 if(!VKID){status.textContent='Не удалось загрузить VK ID SDK.';return}
 try{
-VKID.Config.init({app:54900693,redirectUrl:'https://games4coins.github.io/bok_body_cabinet/',responseMode:VKID.ConfigResponseMode.Callback,source:VKID.ConfigSource.LOWCODE,scope:''});
+VKID.Config.init({app:54901191,redirectUrl:'https://games4coins.github.io/bok_body_cabinet/',responseMode:VKID.ConfigResponseMode.Callback,source:VKID.ConfigSource.LOWCODE,scope:''});
 new VKID.OneTap().render({container:document.getElementById('vk-login'),showAlternativeLogin:true,styles:{height:46}})
 .on(VKID.WidgetEvents.ERROR,fail)
 .on(VKID.OneTapInternalEvents.LOGIN_SUCCESS,async payload=>{
