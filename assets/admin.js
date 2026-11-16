@@ -135,7 +135,7 @@
     fill(topEl,
       h('a', { class: 'tab', href: 'index.html', title: 'Страница бронирования для участников' }, '← К бронированию'),
       h('span', { class: 'brand' }, 'Эфир №' + st.event.number),
-      h('div', { class: 'tabs' }, tab('queue', 'Брони', attention || ''), tab('grid', 'Сетка'), tab('players', 'Игроки'), tab('gifts', '🎁 Подарки'), tab('winner', '🎉 Победитель'), tab('settings', 'Настройки')),
+      h('div', { class: 'tabs' }, tab('queue', 'Брони', attention || ''), tab('grid', 'Сетка'), tab('players', 'Игроки'), tab('gifts', '🎁 Подарки'), tab('deposits', '💳 Балансы'), tab('winner', '🎉 Победитель'), tab('settings', 'Настройки')),
       h('span', { class: 'grow' }),
       h('button', { class: 'tab', title: 'Заморозить / возобновить бронирование', onclick: () => setPause(!st.paused) }, st.paused ? '▶ Возобновить' : '⏸ Перерыв'),
       h('button', { class: 'tab', title: 'Звуковой сигнал', onclick: toggleSound }, A.sound ? '🔔 Звук' : '🔕 Звук'),
@@ -172,6 +172,7 @@
     else if (A.tab === 'players') fill(contentEl, playersView());
     else if (A.tab === 'winner') fill(contentEl, winnerView());
     else if (A.tab === 'gifts') fill(contentEl, giftsView());
+    else if (A.tab === 'deposits') fill(contentEl, depositsView());
     else fill(contentEl, settingsView());
     tickTimers();
   }
@@ -583,6 +584,43 @@
   }
   const adoptPlayers = (r) => { A.players = r.players; A.rules = r.rules; };
   const crosses = (n) => (n > 0 ? h('span', { class: 'xs', title: 'Пропусков подряд: ' + n }, '✖'.repeat(n)) : null);
+
+  function depositsView() {
+    const body=h('div'),search=h('input',{class:'input',type:'search',placeholder:'Поиск участника'});
+    const positive=h('input',{type:'checkbox',checked:true});
+    let accounts=[],selected=null;
+    const newId=()=>String(Date.now())+'-'+Math.random().toString(36).slice(2);
+    const refresh=async()=>{const r=await act('adminDepositList');if(r){accounts=r.players||[];draw();}};
+    function draw(){
+      const rows=accounts.filter(p=>(!positive.checked||p.balance>0)&&norm(p.name).includes(norm(search.value)));
+      const cards=rows.map(p=>h('button',{class:'btn btn-soft btn-block',style:{marginTop:'7px',textAlign:'left'},onclick:()=>{selected=p;draw();}},p.name+' · '+p.balance+' ₽'));
+      const current=selected&&accounts.find(p=>p.key===selected.key);
+      const key=h('input',{class:'input',value:current?current.key:'',placeholder:'Ключ игрока из раздела Игроки'});
+      const amount=h('input',{class:'input',type:'number',min:'1',placeholder:'Сумма пополнения, ₽'});
+      const nums=h('input',{class:'input',placeholder:'Номерки через запятую: 2, 8, 15'});
+      const note=h('input',{class:'input',placeholder:'Комментарий'});
+      const credit=h('button',{class:'btn btn-soft btn-block',onclick:async()=>{
+        if(!key.value.trim()||!amount.value)return toast('Укажите игрока и сумму','bad');
+        if(!confirm('Пополнить тестовый баланс на '+amount.value+' ₽?'))return;
+        const r=await act('adminDepositCredit',{key:key.value.trim(),amount:Number(amount.value),requestId:newId(),note:note.value});
+        if(r){accounts=r.players||[];selected=accounts.find(p=>p.key===key.value.trim());draw();toast('Баланс пополнен');}
+      }},'Пополнить условный баланс');
+      const book=h('button',{class:'btn btn-primary btn-block',onclick:async()=>{
+        if(!key.value.trim()||!nums.value.trim())return toast('Укажите игрока и номерки','bad');
+        if(!confirm('Назначить номерки '+nums.value+' и списать условный баланс?'))return;
+        const r=await act('adminDepositBook',{key:key.value.trim(),numbers:nums.value.split(/[,;\\s]+/).map(Number),requestId:newId(),note:note.value});
+        if(r){accounts=r.players||[];selected=accounts.find(p=>p.key===key.value.trim());draw();toast('Номерки назначены');}
+      }},'Назначить и списать');
+      const history=current?(current.history||[]).map(op=>h('div',{class:'gift-item-row'},h('b',null,(op.amount>0?'+':'')+op.amount+' ₽ · '+op.type),h('div',{class:'meta'},String(op.date).slice(0,10)+' · № '+op.numbers+' · '+op.note))):[];
+      fill(body,h('div',{class:'gift-add-row'},search,h('label',null,positive,'Только с остатком')),
+        h('div',null,...cards),
+        h('h3',null,current?current.name+' · '+current.balance+' ₽':'Операции с условным балансом'),
+        key,amount,note,credit,nums,book,h('h4',null,'История'),...history);
+    }
+    search.addEventListener('input',draw);positive.addEventListener('change',draw);
+    refresh();
+    return h('section',{class:'card'},h('h2',null,'💳 Тестовые балансы'),h('p',{class:'hint'},'Только условные суммы. Не принимайте реальные платежи через этот модуль.'),body);
+  }
 
   function giftsView() {
     const body=h('div'),catalogBox=h('div'),suggestions=h('div');
