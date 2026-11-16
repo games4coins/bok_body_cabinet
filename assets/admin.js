@@ -407,51 +407,50 @@
   }
 
   // ───── Поздравление победителя (не изменяет итоги эфира) ─────
+  // Открытка: предпросмотр и экспорт используют один и тот же canvas.
   function winnerView() {
     const number=h('input',{class:'input',type:'number',min:'1',max:String(A.st.ticketCount),placeholder:'Номерок победителя'});
-    const preset=(A.st.form.find(x=>x.key==='winnerText')||{}).value||'Поздравляем с победой! 🎉';
-    const message=h('textarea',{class:'input',rows:'3',value:preset});message.value=preset;
+    const preset=(A.st.form.find(x=>x.key==='winnerText')||{}).value||'Поздравляем с победой!';
+    const message=h('textarea',{class:'input',rows:'2'});message.value=preset;
     const prize=h('input',{class:'input',type:'number',min:'0',step:'100',value:'12000'});
-    const preview=h('div',{class:'winner-preview'}),copyPreview=h('div',{class:'winner-copy-preview'});let current=null;
-    const postText=()=>{
-      if(!current)return '';
+    const canvas=h('canvas',{class:'winner-premium-canvas',width:'1122',height:'1402'});
+    const copyPreview=h('div',{class:'winner-copy-preview'});let current=null,revision=0;
+    const bg=new Image();bg.src='assets/winner-premium-bg.png';bg.onload=()=>draw();
+    const postText=()=>{if(!current)return '';
       const link=String(current.vkUrl||'').trim(),name=current.name||'Победитель';
       const tagged=/^https:\/\/(?:www\.)?(?:vk\.com|vk\.ru)\/[a-zA-Z0-9_.-]+\/?$/.test(link)?'['+link+'|'+name+']':name;
       return '💥Сегодня в '+A.st.event.number+'-м эфире '+tagged+' с номерком №'+current.n+' забирает шарнирное тело стоимостью до '+Number(prize.value||0).toLocaleString('ru-RU')+' руб. включительно, либо может доплатить разницу до более дорогого тела или комплектации.';
     };
-    const draw=()=>{
-      const n=Number(number.value),matches=A.st.bookings.filter(b=>b.status==='ПОДТВЕРЖДЕНА'&&b.numbers.map(Number).includes(n));
-      if(!Number.isInteger(n)||matches.length!==1){current=null;fill(preview,h('p',{class:'empty'},'Выберите подтверждённый номерок'));fill(copyPreview);return;}
-      current={...matches[0],n};const txt=message.value.replace(/\{name\}/g,current.name).replace(/\{number\}/g,String(n)).replace(/\{event\}/g,String(A.st.event.number));
-      fill(preview,h('div',{class:'winner-stage'},h('div',{class:'winner-sparks','aria-hidden':'true'},'✦  ✧  ✦  ✧  ✦'),h('div',{class:'winner-brand'},'ВОК',h('small',null,'МАСТЕРСКАЯ ШАРНИРНЫХ ТЕЛ')),
-        h('div',{class:'winner-heading'},'ПОЗДРАВЛЯЕМ',h('em',null,'победителя!')),
-        h('div',{class:'winner-portrait'},avatar(current.name,current.photo,280)),h('div',{class:'winner-event'},'ЭФИР № '+A.st.event.number),
-        h('div',{class:'winner-name'},current.name),h('div',{class:'winner-number'},'№ '+n),h('div',{class:'winner-prize'},'ШАРНИРНОЕ ТЕЛО · ДО '+Number(prize.value||0).toLocaleString('ru-RU')+' ₽'),h('p',null,txt)));
+    const loadPhoto=url=>new Promise(resolve=>{if(!/^https:\/\//.test(url||''))return resolve(null);const img=new Image();img.crossOrigin='anonymous';
+      const timeout=setTimeout(()=>resolve(null),4500);img.onload=()=>{clearTimeout(timeout);resolve(img);};img.onerror=()=>{clearTimeout(timeout);resolve(null);};img.src=url;});
+    const draw=async()=>{
+      const rev=++revision,n=Number(number.value),matches=A.st.bookings.filter(b=>b.status==='ПОДТВЕРЖДЕНА'&&b.numbers.map(Number).includes(n));
+      current=Number.isInteger(n)&&matches.length===1?{...matches[0],n}:null;
+      const ctx=canvas.getContext('2d'),W=1122,H=1402;ctx.clearRect(0,0,W,H);
+      if(bg.complete&&bg.naturalWidth)ctx.drawImage(bg,0,0,W,H);else{ctx.fillStyle='#390c23';ctx.fillRect(0,0,W,H);}
+      const label=(t,x,y,font,color,max=950)=>{ctx.font=font;ctx.fillStyle=color;ctx.textAlign='center';ctx.shadowColor='rgba(35,5,18,.55)';ctx.shadowBlur=8;ctx.fillText(String(t),x,y,max);ctx.shadowBlur=0;};
+      label('В О К',561,125,'66px Georgia, serif','#ffdda4');label('МАСТЕРСКАЯ ШАРНИРНЫХ ТЕЛ',561,171,'22px sans-serif','#f9ddb4');
+      label('ПОЗДРАВЛЯЕМ',561,248,'82px Georgia, serif','#ffe6b4');label('победителя!',561,313,'italic 66px Georgia, serif','#ffe0a5');
+      if(!current){label('Введите номерок подтверждённой брони',561,1065,'30px sans-serif','#fff0d6');fill(copyPreview);return;}
+      const photo=await loadPhoto(current.photo);if(rev!==revision)return;
+      ctx.save();ctx.beginPath();ctx.arc(306,628,232,0,Math.PI*2);ctx.clip();
+      if(photo){const z=Math.max(464/photo.width,464/photo.height),w=photo.width*z,h=photo.height*z;ctx.drawImage(photo,306-w/2,628-h/2,w,h);}else{ctx.fillStyle='#6d2d48';ctx.fillRect(74,396,464,464);label((current.name||'?').slice(0,1),306,700,'bold 230px Georgia, serif','#f9d9a4');}ctx.restore();
+      label('ЭФИР № '+A.st.event.number,822,490,'bold 34px sans-serif','#ffdb9c',405);
+      const parts=String(current.name||'Победитель').trim().split(/\s+/);
+      if(parts.length>1){label(parts[0],823,570,'italic 66px Georgia, serif','#fff1d5',425);label(parts.slice(1).join(' '),823,650,'italic 64px Georgia, serif','#fff1d5',425);}else label(parts[0],823,610,'italic 69px Georgia, serif','#fff1d5',425);
+      label('№ '+current.n,818,825,'bold 124px Georgia, serif','#55132d',450);
+      label('ШАРНИРНОЕ ТЕЛО',561,1035,'bold 39px Georgia, serif','#ffe5af');
+      label('СТОИМОСТЬЮ ДО '+Number(prize.value||0).toLocaleString('ru-RU')+' ₽',561,1090,'bold 31px sans-serif','#fff2d5');
+      const msg=message.value.replace(/\{name\}/g,current.name).replace(/\{number\}/g,String(n)).replace(/\{event\}/g,String(A.st.event.number));
+      ctx.font='27px sans-serif';let lines=[],line='';for(const word of msg.split(/\s+/)){const t=line?line+' '+word:word;if(ctx.measureText(t).width>890&&line){lines.push(line);line=word;}else line=t;}if(line)lines.push(line);
+      lines.slice(0,4).forEach((t,i)=>label(t,561,1215+i*38,'27px sans-serif','#fff1dc',930));
       fill(copyPreview,h('p',{class:'hint'},postText()));
     };
-    number.addEventListener('input',draw);message.addEventListener('input',draw);prize.addEventListener('input',draw);
-    const exportPng=async()=>{
-      if(!current){toast('Сначала выберите номерок','bad');return;}
-      const c=document.createElement('canvas');c.width=1080;c.height=1350;const x=c.getContext('2d');
-      const g=x.createRadialGradient(540,510,60,540,680,950);g.addColorStop(0,'#8c3657');g.addColorStop(.55,'#501e38');g.addColorStop(1,'#230f20');x.fillStyle=g;x.fillRect(0,0,1080,1350);
-      x.strokeStyle='#d7a65b';x.lineWidth=4;x.strokeRect(28,28,1024,1294);x.strokeStyle='#9e6a50';x.lineWidth=1;x.strokeRect(43,43,994,1264);
-      for(let i=0;i<90;i++){let a=i*2.39996,r=120+(i*71)%620;x.fillStyle=['#f8db9b','#e3a7ad','#fff3d7'][i%3];x.globalAlpha=.45+(i%4)*.12;x.beginPath();x.arc(540+Math.cos(a)*r,650+Math.sin(a)*r,2+i%4,0,Math.PI*2);x.fill();}x.globalAlpha=1;
-      const line=(t,y,font,color)=>{x.font=font;x.fillStyle=color;x.textAlign='center';x.fillText(t,540,y,970);};
-      line('В О К',116,'58px Georgia, serif','#f7d8a1');line('МАСТЕРСКАЯ ШАРНИРНЫХ ТЕЛ',155,'20px sans-serif','#e8c391');
-      line('ПОЗДРАВЛЯЕМ',258,'100px Georgia, serif','#f9dca6');line('победителя!',324,'italic 72px Georgia, serif','#f5c987');
-      x.beginPath();x.arc(540,585,218,0,Math.PI*2);x.fillStyle='#d9b16d';x.fill();
-      let loaded=false;if(current.photo&&/^https:\/\//.test(current.photo))try{const img=new Image();img.crossOrigin='anonymous';img.src=current.photo;await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;setTimeout(()=>rej(Error('timeout')),4500);});x.save();x.beginPath();x.arc(540,585,207,0,Math.PI*2);x.clip();let scale=Math.max(414/img.width,414/img.height),w=img.width*scale,h=img.height*scale;x.drawImage(img,540-w/2,585-h/2,w,h);x.restore();loaded=true;}catch(e){}
-      if(!loaded){x.fillStyle='#71334f';x.beginPath();x.arc(540,585,207,0,Math.PI*2);x.fill();line(current.name.slice(0,1).toUpperCase(),635,'bold 170px Georgia, serif','#f7d8a1');}
-      line('ЭФИР № '+A.st.event.number,852,'28px sans-serif','#f7d8a1');line(current.name,941,'bold 70px Georgia, serif','#fff3df');line('№ '+current.n,1072,'bold 130px Georgia, serif','#f7d8a1');
-      line('ШАРНИРНОЕ ТЕЛО · ДО '+Number(prize.value||0).toLocaleString('ru-RU')+' ₽',1160,'bold 32px sans-serif','#fff1db');
-      const txt=message.value.replace(/\{name\}/g,current.name).replace(/\{number\}/g,String(current.n)).replace(/\{event\}/g,String(A.st.event.number));
-      x.font='25px sans-serif';const words=txt.split(/\s+/);let lines=[],l='';for(const w of words){const test=l?l+' '+w:w;if(x.measureText(test).width>850&&l){lines.push(l);l=w;}else l=test;}if(l)lines.push(l);lines.slice(0,3).forEach((t,i)=>line(t,1220+i*30,'25px sans-serif','#fff1db'));
-      const a=document.createElement('a');a.download='BOK_победитель_'+A.st.event.number+'_'+current.n+'.png';a.href=c.toDataURL('image/png');a.click();if(!loaded)toast('Фото недоступно для экспорта — использована буква имени');
-    };
-    return h('section',{class:'card'},h('h2',null,'🎉 Поздравление победителя'),h('p',{class:'hint'},'Номерок из подтверждённой брони. Картинка не меняет итоги эфира.'),
-      h('div',{class:'field'},h('label',null,'Номерок победителя'),number),h('div',{class:'field'},h('label',null,'Стоимость подарка, ₽'),prize),h('div',{class:'field'},h('label',null,'Текст на открытке'),message),preview,
-      h('button',{class:'btn btn-primary btn-block',onclick:exportPng},'Сохранить премиальную открытку PNG 1080×1350'),
-      h('h3',null,'Текст для поста ВК'),copyPreview,h('button',{class:'btn btn-soft btn-block',onclick:()=>{if(!current){toast('Выберите номерок','bad');return;}copyText(postText());toast('Текст скопирован');}},'📋 Скопировать поздравление'));
+    number.addEventListener('input',draw);message.addEventListener('input',draw);prize.addEventListener('input',draw);draw();
+    return h('section',{class:'card'},h('h2',null,'🎉 Премиальное поздравление победителя'),h('p',{class:'hint'},'Изображение — художественный фон, имя и номерок накладываются автоматически. Предпросмотр и PNG совпадают.'),
+      h('div',{class:'field'},h('label',null,'Номерок победителя'),number),h('div',{class:'field'},h('label',null,'Стоимость подарка, ₽'),prize),h('div',{class:'field'},h('label',null,'Текст на открытке'),message),canvas,
+      h('button',{class:'btn btn-primary btn-block',onclick:()=>{if(!current)return toast('Выберите подтверждённый номерок','bad');try{const a=document.createElement('a');a.download='BOK_победитель_'+A.st.event.number+'_'+current.n+'.png';a.href=canvas.toDataURL('image/png');a.click();}catch(e){toast('Не удалось сохранить фото: ограничение загрузки изображения ВК','bad');}}},'Сохранить открытку PNG 1122×1402'),
+      h('h3',null,'Текст для поста ВК'),copyPreview,h('button',{class:'btn btn-soft btn-block',onclick:()=>{if(!current)return toast('Выберите номерок','bad');copyText(postText());toast('Текст скопирован');}},'📋 Скопировать поздравление'));
   }
 
   function settingsView() {
@@ -466,7 +465,7 @@
       if (r) renderTab();
     } }, 'Сохранить настройки');
     return h('div', null, h('section', { class: 'card' },
-      GROUPS.map(([title, keys]) => h('div', { class: 'set-group' }, h('h3', null, title), keys.filter((k) => byKey[k]).map((k) => control(byKey[k])))),
+      h('div', { class: 'set-group' }, h('h3', null, 'Параметры эфира и бронирования'), A.st.form.map((f) => control(f))),
       saveBtn,
       h('p', { class: 'note-foot' }, 'Время тихих часов и дедлайны считаются в часовом поясе организатора. Изменения часов на подтверждение действуют на новые брони.')),
       h('section', { class: 'card', style: { marginTop: '20px' } },
@@ -586,18 +585,38 @@
   const crosses = (n) => (n > 0 ? h('span', { class: 'xs', title: 'Пропусков подряд: ' + n }, '✖'.repeat(n)) : null);
 
   function giftsView() {
-    const body=h('div',null,h('p',{class:'lead'},'Загружаем подарки…'));
-    const refresh=async()=>{const r=await act('adminGifts');if(!r)return;
-      fill(body,(r.gifts||[]).length?r.gifts.slice().reverse().map(g=>h('div',{class:'prow'},h('div',null,h('b',null,g.title),' · ',g.name,' · эфир ',g.event||'—',h('div',{class:'meta'},g.received?'✅ Получен '+g.receivedAt:'📦 Не получен')),
-        h('button',{class:'btn btn-soft btn-sm',onclick:async()=>{const v=await act('adminGiftReceived',{id:g.id,received:!g.received});if(v)refresh();}},g.received?'Отменить выдачу':'Отметить полученным'))):h('p',{class:'hint'},'Подарков пока нет'));
+    const body=h('div'),catalogBox=h('div'),suggestions=h('div');
+    const player=h('input',{class:'input',placeholder:'Имя или ссылка ВК'});
+    const catalogSelect=h('select',{class:'input'}),event=h('input',{class:'input',value:String(A.st.event.number),placeholder:'Номер эфира'});
+    let chosen=null,expanded=new Set(),last=[];
+    const renderCatalog=items=>{
+      fill(catalogSelect,h('option',{value:''},'— Выберите подарок из каталога —'),...items.filter(x=>x.active).map(x=>h('option',{value:x.id},x.title)));
+      const newTitle=h('input',{class:'input',placeholder:'Название нового подарка'});
+      fill(catalogBox,h('h3',null,'📚 Каталог подарков'),h('p',{class:'hint'},'Каталог общий для всех эфиров. Неактивные позиции не предлагаются для новых назначений.'),
+        h('div',{class:'gift-catalog-list'},...items.map(x=>h('div',{class:'gift-catalog-row'},h('span',null,x.title),h('button',{class:'btn btn-soft btn-sm',onclick:async()=>{const r=await act('adminGiftCatalogSet',{id:x.id,active:!x.active});if(r)renderCatalog(r.catalog);}},x.active?'Отключить':'Включить')))),
+        h('div',{class:'gift-add-row'},newTitle,h('button',{class:'btn btn-soft',onclick:async()=>{if(!newTitle.value.trim())return toast('Введите название','bad');const r=await act('adminGiftCatalogAdd',{title:newTitle.value});if(r)renderCatalog(r.catalog);}},'Добавить в каталог')));
     };
-    const player=h('input',{class:'input',placeholder:'Поиск игрока по имени или ссылке'}),suggestions=h('div'),title=h('input',{class:'input',placeholder:'Название подарка'}),event=h('input',{class:'input',placeholder:'Номер эфира',value:String(A.st.event.number)});let chosen=null;
+    const renderList=()=>{
+      const groups=new Map();for(const g of last){const id=g.key||g.name;if(!groups.has(id))groups.set(id,{name:g.name,gifts:[]});groups.get(id).gifts.push(g);}
+      const arr=Array.from(groups.entries()).sort((a,b)=>a[1].name.localeCompare(b[1].name,'ru'));
+      fill(body,arr.length?arr.map(([key,group])=>{
+        const pending=group.gifts.filter(g=>!g.received).length,done=group.gifts.length-pending;
+        return h('div',{class:'gift-player-group'},h('button',{class:'gift-player-head',onclick:()=>{expanded.has(key)?expanded.delete(key):expanded.add(key);renderList();}},
+          h('span',null,(expanded.has(key)?'▾ ':'▸ ')+group.name),h('span',{class:'gift-counts'},'📦 Ожидают: '+pending+'   ·   ✅ Получено: '+done)),
+          expanded.has(key)?h('div',{class:'gift-player-items'},...group.gifts.slice().reverse().map(g=>h('div',{class:'gift-item-row'},
+            h('div',null,h('b',null,g.title),h('div',{class:'meta'},'Эфир №'+(g.event||'—')+' · '+(g.received?'Получен '+(g.receivedAt||''):'Ожидает выдачи'))),
+            h('button',{class:'btn btn-soft btn-sm',onclick:async()=>{const r=await act('adminGiftReceived',{id:g.id,received:!g.received});if(r){last=r.gifts;renderList();}}},g.received?'Отменить получение':'Отметить полученным')))):null);
+      }):h('p',{class:'hint'},'Подарков пока нет'));
+    };
+    const refresh=async()=>{const r=await act('adminGifts');if(!r)return;last=r.gifts||[];renderList();renderCatalog(r.catalog||[]);};
     const lookup=async()=>{if(!A.players){const r=await act('adminPlayers');if(!r)return;A.players=r.players;A.rules=r.rules;}
       const q=norm(player.value.trim());fill(suggestions,q.length<2?null:A.players.filter(p=>norm(p.name).includes(q)||norm(p.url).includes(q)).slice(0,8).map(p=>h('button',{class:'btn btn-soft btn-block',onclick:()=>{chosen=p;player.value=p.name;fill(suggestions);}},p.name)));
     };
     player.addEventListener('input',()=>{chosen=null;lookup();});
-    const add=h('button',{class:'btn btn-primary btn-block',onclick:async()=>{if(!chosen){toast('Выберите игрока из подсказок','bad');return;}const r=await act('adminGiftAdd',{key:chosen.key,title:title.value,event:event.value});if(r){title.value='';refresh();toast('Подарок записан');}}},'Добавить подарок');
-    refresh();return h('section',{class:'card'},h('h2',null,'🎁 Учёт подарков'),h('p',{class:'hint'},'Каждый подарок — отдельная запись. Получение подтверждает администратор.'),player,suggestions,title,event,add,body);
+    const add=h('button',{class:'btn btn-primary btn-block',onclick:async()=>{if(!chosen)return toast('Выберите участника из подсказок','bad');if(!catalogSelect.value)return toast('Выберите подарок','bad');const r=await act('adminGiftAdd',{key:chosen.key,catalogId:catalogSelect.value,event:event.value});if(r){last=r.gifts;expanded.add(chosen.key);renderList();toast('Подарок назначен');}}},'Назначить подарок');
+    refresh();return h('section',{class:'card'},h('h2',null,'🎁 Подарки участников'),h('p',{class:'hint'},'Нажмите на имя, чтобы увидеть все подарки участника. Получение подтверждается вручную.'),
+      h('div',{class:'gift-assignment'},h('h3',null,'Назначить подарок'),player,suggestions,catalogSelect,event,add),h('h3',null,'Участники с подарками'),body,
+      h('details',{class:'gift-catalog-panel'},h('summary',null,'⚙ Управление каталогом подарков'),catalogBox));
   }
 
   function playersView() {

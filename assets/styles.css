@@ -370,3 +370,26 @@ button.pill { border: 0; font: inherit; cursor: pointer; }
 @keyframes winner-glow{from{opacity:.4;transform:scale(.8)}to{opacity:1;transform:scale(1.15)}}
 @media(max-width:650px){.winner-stage{min-height:720px;padding:32px 17px 40px;gap:12px}.winner-stage .winner-portrait{width:min(68vw,330px);height:min(68vw,330px);border-width:6px}.winner-stage .winner-number{padding:7px 27px}.winner-stage .winner-brand{letter-spacing:.16em}.winner-stage .winner-heading{font-size:clamp(32px,8vw,52px)}}
 @media(prefers-reduced-motion:reduce){.winner-stage:after,.winner-sparks{animation:none}}
+
+/* v6.4: каталог подарков, группировка и премиальная открытка */
+.gift-player-group{border:1px solid #eadbce;border-radius:14px;margin:10px 0;overflow:hidden;background:#fff}
+.gift-player-head{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;padding:15px 16px;background:#fff9f3;border:0;cursor:pointer;text-align:left;font-weight:700;font-size:15px;color:#39271f}
+.gift-counts{font-weight:500;font-size:13px;color:#6d5b50;white-space:normal;text-align:right}
+.gift-player-items{padding:6px 14px 14px}.gift-item-row{display:flex;justify-content:space-between;align-items:center;gap:14px;border-top:1px solid #eee4da;padding:12px 0}
+.gift-catalog-panel{margin-top:24px;padding:14px;border:1px solid #e7d5c5;border-radius:12px}.gift-catalog-panel summary{cursor:pointer;font-weight:700}
+.gift-catalog-row{display:flex;justify-content:space-between;align-items:center;gap:10px;border-bottom:1px solid #eee;padding:9px 0}.gift-add-row{display:flex;gap:8px;margin-top:12px}.gift-add-row input{flex:1;min-width:0}
+.gift-assignment{padding:14px;border:1px solid #eee2d6;border-radius:14px;margin-bottom:20px;display:grid;gap:8px}
+.winner-premium-canvas{display:block;width:min(100%,620px);height:auto;margin:18px auto;border-radius:12px;box-shadow:0 14px 44px rgba(45,8,24,.28)}
+@media(max-width:600px){.gift-player-head,.gift-item-row{flex-wrap:wrap}.gift-add-row{flex-direction:column}}
+
+/* v6.5 — единая навигация, доступные имена и кликабельные профили */
+.hero-top{display:flex;flex-direction:column;align-items:stretch;gap:12px;margin-bottom:20px}
+.hero-status{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.hero-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;width:100%}
+.hero-actions .admin-link,.hero-top .admin-link{margin:0!important;display:flex;justify-content:center;align-items:center;text-align:center;min-width:0;min-height:48px;padding:10px 7px;border-radius:13px;border:1px solid rgba(255,225,195,.38);background:linear-gradient(155deg,rgba(95,38,18,.44),rgba(67,26,15,.27));box-shadow:inset 0 1px rgba(255,255,255,.13);font-family:inherit;font-size:clamp(12px,2.8vw,15px);font-weight:750;line-height:1.15;letter-spacing:0;white-space:normal;text-wrap:balance;color:#fff}
+.hero-actions .admin-link:hover,.hero-actions .admin-link:focus-visible{background:rgba(90,34,12,.7);outline:2px solid #ffe3b2;outline-offset:2px}
+.brow{grid-template-columns:minmax(125px,2.4fr) repeat(4,minmax(29px,.48fr)) minmax(43px,.65fr);gap:3px;font-size:12px}
+.brow .bn{gap:5px}.brow .bn b{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;line-height:1.18;text-align:left}.brow .bn .avatar-img{flex-shrink:0;width:20px!important;height:20px!important}
+.participant-link{appearance:none;border:0;background:none;padding:3px 0;color:inherit;cursor:pointer;width:100%;font:inherit;text-align:left}.participant-link:hover b,.participant-link:focus-visible b{text-decoration:underline;text-underline-offset:3px}.participant-link:focus-visible,.participant-row:focus-visible{outline:2px solid #b5461a;outline-offset:2px}
+.participant-row{display:flex;width:100%;border:0;background:transparent;text-align:left;color:inherit;font:inherit;cursor:pointer}.participant-row:hover{background:#fff5e9}
+@media(max-width:520px){.hero-actions{gap:7px}.hero-actions .admin-link{font-size:clamp(11px,3.15vw,14px);padding:10px 4px;min-height:52px}.brow{grid-template-columns:minmax(112px,2.5fr) repeat(4,minmax(24px,.43fr)) minmax(34px,.5fr);font-size:11px;gap:2px}.brow.bhead{font-size:10px}.brow .bn .avatar-img{width:18px!important;height:18px!important}.btable{overflow-x:auto}.sheet{max-width:100%}}
