@@ -285,7 +285,7 @@
     const picker=h('select',{class:'input'},h('option',{value:''},'— Выберите участника —'),
       ...directory.map(p=>h('option',{value:p.key},p.name)));
     const info=h('div',{class:'msg'},'Выберите участника для проверки баланса');
-    const priceText=String(A.st.event.priceText||'');
+    const priceText=String(A.st.event.priceText||A.st.price||'');
     const matched=priceText.trim().match(/^(\\d[\\d\\s]*)\\s*(?:₽|руб\\.?|рублей)?$/i);
     const price=matched?Number(matched[1].replace(/\\s/g,'')):0;
     const update=()=>{
@@ -632,8 +632,9 @@
       const newPlayers=positive.checked?[]:playerDirectory.filter(p=>!accounts.some(a=>a.key===p.key)&&norm(p.name).includes(norm(search.value))).map(p=>({key:p.key,name:p.name,balance:0,history:[]}));
       rows.push(...newPlayers);
       const cards=rows.map(p=>h('button',{class:'btn btn-soft btn-block',style:{marginTop:'7px',textAlign:'left'},onclick:()=>{selected=p;draw();}},p.name+' · '+p.balance+' ₽'));
-      const current=selected&&accounts.find(p=>p.key===selected.key);
+      const current=selected&&(accounts.find(p=>p.key===selected.key)||selected);
       const key=h('select',{class:'input'},h('option',{value:''},'— Выберите участника —'),...playerDirectory.map(p=>h('option',{value:p.key,selected:!!current&&p.key===current.key},p.name)));
+      key.addEventListener('change',()=>{selected=accounts.find(p=>p.key===key.value)||playerDirectory.find(p=>p.key===key.value)||null;draw();});
       const amount=h('input',{class:'input',type:'number',min:'1',placeholder:'Сумма пополнения, ₽'});
       const nums=h('input',{class:'input',placeholder:'Номерки через запятую: 2, 8, 15'});
       const note=h('input',{class:'input',placeholder:'Комментарий'});
