@@ -41,7 +41,7 @@
     detectNew(st);
     A.st = st;
     renderTop();
-    if (A.tab !== 'settings' && A.tab !== 'players' && A.tab !== 'winner' && A.tab !== 'gifts') renderTab();
+    if (A.tab !== 'settings' && A.tab !== 'players' && A.tab !== 'winner' && A.tab !== 'gifts' && A.tab !== 'deposits') renderTab();
     const n = st.bookings.filter((b) => NEEDS_CHECK.indexOf(b.status) >= 0).length;
     document.title = (n ? '(' + n + ') ' : '') + 'Номерок — админка';
   }
