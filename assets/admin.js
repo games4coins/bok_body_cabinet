@@ -638,6 +638,15 @@
       const amount=h('input',{class:'input',type:'number',min:'1',placeholder:'Сумма пополнения, ₽'});
       const nums=h('input',{class:'input',placeholder:'Номерки через запятую: 2, 8, 15'});
       const note=h('input',{class:'input',placeholder:'Комментарий'});
+      const vkId=h('input',{class:'input',inputmode:'numeric',placeholder:'Числовой VK ID, например 55560074'});
+      const linkBtn=h('button',{class:'btn btn-soft btn-block',onclick:async()=>{
+        if(!key.value||!/^\\d{3,15}$/.test(vkId.value.trim()))return toast('Выберите игрока и укажите числовой VK ID','bad');
+        const p=playerDirectory.find(x=>x.key===key.value);
+        if(!p)return toast('Игрок не найден','bad');
+        if(!confirm('Связать VK ID '+vkId.value+' с карточкой «'+p.name+'» ('+(p.url||'нет ссылки')+')? Убедитесь, что это один человек.'))return;
+        const r=await act('adminVkLink',{key:key.value,vkId:vkId.value.trim(),note:'Ручная привязка старого профиля'});
+        if(r)toast('VK ID привязан. Старая карточка и накопления сохранены.');
+      }},'🔗 Привязать старый профиль к VK ID');
       const credit=h('button',{class:'btn btn-soft btn-block',onclick:async()=>{
         if(!key.value.trim()||!amount.value)return toast('Укажите игрока и сумму','bad');
         if(!confirm('Пополнить тестовый баланс на '+amount.value+' ₽?'))return;
@@ -654,7 +663,7 @@
       fill(body,h('div',{class:'gift-add-row'},search,h('label',null,positive,'Только с остатком')),
         h('div',null,...cards),
         h('h3',null,current?current.name+' · '+current.balance+' ₽':'Операции с условным балансом'),
-        key,amount,note,credit,nums,book,h('h4',null,'История'),...history);
+        key,amount,note,credit,nums,book,h('h4',null,'Привязка старых VK-профилей'),h('p',{class:'hint'},'Выберите участника и введите его числовой VK ID. Старая ссылка и история останутся без изменений. Не связывайте по одному только имени.'),vkId,linkBtn,h('h4',null,'История'),...history);
     }
     search.addEventListener('input',draw);positive.addEventListener('change',draw);
     refresh();
