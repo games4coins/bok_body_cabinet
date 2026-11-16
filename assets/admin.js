@@ -286,8 +286,8 @@
       ...directory.map(p=>h('option',{value:p.key},p.name)));
     const info=h('div',{class:'msg'},'Выберите участника для проверки баланса');
     const priceText=String(A.st.event.priceText||A.st.price||'');
-    const matched=priceText.trim().match(/^(\\d[\\d\\s]*)\\s*(?:₽|руб\\.?|рублей)?$/i);
-    const price=matched?Number(matched[1].replace(/\\s/g,'')):0;
+    const matched=priceText.trim().match(/^(\d[\d\s]*)\s*(?:₽|руб\.?|рублей)?$/i);
+    const price=matched?Number(matched[1].replace(/\s/g,'')):0;
     const update=()=>{
       const account=accounts.get(picker.value),balance=account?Number(account.balance):0,cost=price*nums.length;
       fill(info,h('b',null,'Баланс: '+balance+' ₽ · Списание: '+cost+' ₽'),
