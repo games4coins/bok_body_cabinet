@@ -415,7 +415,7 @@
     const prize=h('input',{class:'input',type:'number',min:'0',step:'100',value:'12000'});
     const canvas=h('canvas',{class:'winner-premium-canvas',width:'1122',height:'1402'});
     const copyPreview=h('div',{class:'winner-copy-preview'});let current=null,revision=0;
-    const bg=new Image();bg.src='assets/winner-premium-bg.png';bg.onload=()=>draw();
+    const bg=new Image();bg.src='/bok_body/assets/winner-premium-bg.png';bg.onload=()=>draw();
     const postText=()=>{if(!current)return '';
       const link=String(current.vkUrl||'').trim(),name=current.name||'Победитель';
       const tagged=/^https:\/\/(?:www\.)?(?:vk\.com|vk\.ru)\/[a-zA-Z0-9_.-]+\/?$/.test(link)?'['+link+'|'+name+']':name;
