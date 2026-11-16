@@ -276,13 +276,14 @@
 
   // Публичный кабинет БЕЗ авторизации: только те сведения, которые уже видны всем в списке балансов.
   // Нельзя выдавать его за подтверждение владения аккаунтом или давать операции с балансом.
-  async function openCabinet(target) {
+  async function openCabinet(target, publicMode=false) {
     const identity=window.BokVK&&window.BokVK.profile();
-    if(!identity) {
+    if(!identity && !publicMode) {
       const content=h('div',null,
         h('p',{class:'lead'},'Войдите через ВКонтакте, чтобы открыть свой кабинет.'),
         h('div',{class:'cab-vk-login'}),
-        h('p',{class:'hint'},'Тестовый режим: только публичные сведения. Изменять накопления через VK ID пока нельзя.'));
+        h('p',{class:'hint'},'Вход сохраняется на этом устройстве до ручного выхода.'),
+        h('button',{class:'btn btn-soft btn-block',onclick:()=>{closeModal();openCabinet(target,true);}},'Продолжить без авторизации'));
       openModal([h('h3',null,'🔐 Кабинет ВОК — вход через VK ID'),content]);
       const error=h('p',{class:'msg err',role:'alert'});content.appendChild(error);
       if(!window.BokVK){error.textContent='Модуль VK ID недоступен';return;}
@@ -291,7 +292,7 @@
       return;
     }
     const box=h('div',null,h('p',{class:'lead'},'Загружаем публичные данные…'));
-    openModal([h('h3',null,'👤 Кабинет участника (без авторизации)'),box]);
+    openModal([h('h3',null,identity?'👤 Личный кабинет · VK ID':'👤 Кабинет участника (без авторизации)'),box]);
     const r=await api.balances();
     if(!r.ok){fill(box,h('p',{class:'msg err'},'Ошибка загрузки'));return;}
     const players=r.players||[],rules=r.rules||{},contact=safeUrl(rules.contactUrl);
@@ -303,12 +304,33 @@
       const eligible=typeof p.bal==='number'&&p.bal>=10;
       const buttonText=p.frozen?'Запросить досрочную разморозку (−1 номерок)':'Запросить заморозку';
       const action=contact&&((p.frozen)||eligible)?h('a',{class:'btn btn-primary btn-block',href:contact,target:'_blank',rel:'noopener noreferrer'},buttonText):h('button',{class:'btn btn-soft btn-block',disabled:true,title:'Для заморозки требуется баланс не менее 10 номерков'},'Заморозка доступна от 10 номерков');
+      const authenticated=!!identity && String(p.url||'').toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/^vk\.(?:com|ru)\//,'').replace(/\/$/,'')==='id'+identity.id;
+      const freezeUI=authenticated?h('div',{class:'cab-freeze-panel'},
+        h('h4',null,p.frozen?'❄ Разморозка счёта':'❄ Запланировать заморозку'),
+        h('p',{class:'hint'},'Укажите дату окончания заморозки. Пока запрос отправляется администратору — автоматическое изменение баланса не подключено.'),
+        h('label',null,'Дата окончания заморозки'),
+        h('input',{class:'input',type:'date',min:new Date(Date.now()+86400000).toISOString().slice(0,10),id:'bok-freeze-until'}),
+        h('button',{class:'btn btn-soft btn-block',style:{marginTop:'8px'},onclick:()=>{
+          const date=document.getElementById('bok-freeze-until').value;
+          if(!date){toast('Выберите дату в календаре','bad');return;}
+          const maxDays=Number(rules.freezeMaxDays||90),minDays=Number(rules.freezeMinDays||1);
+          const days=Math.ceil((new Date(date+'T12:00:00').getTime()-Date.now())/86400000);
+          if(!p.frozen&&(days<minDays||days>maxDays)){toast('Выберите срок от '+minDays+' до '+maxDays+' дней','bad');return;}
+          const message='ВОК — запрос '+(p.frozen?'досрочной разморозки':'заморозки')+'\\nУчастник: '+p.name+'\\nVK ID: '+identity.id+'\\nДата: '+date+'\\nПрошу подтвердить запрос.';
+          if(contact){navigator.clipboard&&navigator.clipboard.writeText(message).catch(()=>{});window.open(contact,'_blank','noopener');toast('Текст заявки скопирован. Отправьте его администратору.');}
+          else toast('Адрес сообщений администратора не настроен','bad');
+        }},'Скопировать заявку и открыть сообщения ВК')
+      ):null;
+      const depositUI=authenticated?h('div',{class:'cab-deposit'},
+        h('h4',null,'💳 Аванс на будущие заказы'),
+        h('p',{class:'hint'},'Денежный остаток: не подключён. Это не баланс номерков и не средство оплаты участия в эфирах. Пополнение и списание недоступны до утверждения условий и защищённого учёта.')
+      ):null;
       fill(box,h('button',{class:'btn btn-ghost btn-sm',onclick:()=>showSearch()},'← Сменить участника'),
-        h('div',{class:'cab-profile'},avatar(p.name,p.photo,112),h('div',null,h('h3',{class:p.frozen?'frozen-name':''},p.name),h('p',{class:'meta'},'Публичная карточка · личность не подтверждена'))),
+        h('div',{class:'cab-profile'},avatar(p.name,p.photo,112),h('div',null,h('h3',{class:p.frozen?'frozen-name':''},p.name),h('p',{class:'meta'},authenticated?(identity.restored?'VK ID · вход сохранён на устройстве':'VK ID · вход выполнен'):'Публичная карточка · без авторизации'))),
         h('div',{class:'cab-stats'},h('div',null,'🎟 Баланс: ',h('b',null,p.bal==null?'Скрыт':p.bal)),h('div',null,'❌ Пропуски: ',h('b',null,p.miss)),h('div',null,'🏆 Победы: ',h('b',null,p.wins||0)),h('div',null,p.frozen?'❄ Заморожен':'Активен')),
         p.frozen?h('p',{class:'msg'},left===null?'❄ Бессрочная заморозка по старым правилам':'❄ До бесплатной разморозки осталось '+left+' дн.'):h('p',{class:'hint'},'Доступная заморозка: '+(rules.freezeMinDays||1)+'–'+(rules.freezeMaxDays||90)+' дней. Запрос обрабатывает администратор.'),
-        action,h('h4',null,'🎁 Подарки'),h('div',{class:'gift-list'},(p.gifts||[]).length?(p.gifts||[]).map(g=>h('div',{class:'gift-item'},h('b',null,g.title),' · ',g.received?'✅ Получен '+(g.receivedAt||''):'📦 Ожидает выдачи')):h('p',{class:'hint'},'Подарков пока нет')),
-        h('p',{class:'hint'},'Без авторизации нельзя самостоятельно менять баланс или заморозку. Для оформления заявки откроются сообщения группы ВК.'));
+        authenticated?freezeUI:action,depositUI,h('h4',null,'🎁 Подарки'),h('div',{class:'gift-list'},(p.gifts||[]).length?(p.gifts||[]).map(g=>h('div',{class:'gift-item'},h('b',null,g.title),' · ',g.received?'✅ Получен '+(g.receivedAt||''):'📦 Ожидает выдачи')):h('p',{class:'hint'},'Подарков пока нет')),
+        h('p',{class:'hint'},authenticated?'Для самостоятельного изменения заморозки и аванса потребуется защищённый серверный API. Сейчас запрос обрабатывает администратор.':'Без авторизации нельзя самостоятельно менять баланс или заморозку. Для оформления заявки откроются сообщения группы ВК.'));
     };
     const draw=()=>{const t=norm(q.value.trim()).replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/^vk\.(?:com|ru)\//,'').replace(/\/$/,'');const arr=t.length>=2?players.filter(p=>norm(p.name).includes(t)||norm(p.url||'').includes(t)||norm(p.url||'').split('/').pop().includes(t)).slice(0,20):[];
       fill(matches,arr.length?arr.map(p=>h('button',{class:'btn btn-soft btn-block',style:{marginTop:'6px'},onclick:()=>select(p)},p.name+' · 🎟 '+(p.bal==null?'—':p.bal))):h('p',{class:'hint'},'Начните вводить имя или ссылку ВК.'));
@@ -317,11 +339,12 @@
     q.addEventListener('input',draw);
     const known=players.find(p=>{
       const url=String(p.url||'').toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/^vk\.(?:com|ru)\//,'').replace(/\/$/,'');
-      return url==='id'+identity.id;
+      return identity&&url==='id'+identity.id;
     });
     if(known)select(known);
-    else fill(box,h('div',{class:'banner info'},'Вы вошли как '+identity.name+'. Ссылка vk.com/id'+identity.id+' не найдена в публичной базе. Чужой профиль не открывается.'));
-    box.appendChild(h('button',{class:'btn btn-ghost btn-sm',style:{marginTop:'14px'},onclick:()=>{window.BokVK.logout();closeModal();openCabinet();}},'Выйти из VK ID'));
+    else if(identity) fill(box,h('div',{class:'banner info'},'Вы вошли как '+identity.name+'. Ссылка vk.com/id'+identity.id+' не найдена в публичной базе.'));
+    else showSearch();
+    if(identity)box.appendChild(h('button',{class:'btn btn-ghost btn-sm',style:{marginTop:'14px'},onclick:()=>{window.BokVK.logout();closeModal();openCabinet();}},'Выйти из VK ID'));
   }
 
   function renderPlayers() {
