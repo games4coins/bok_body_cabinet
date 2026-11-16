@@ -285,13 +285,14 @@
     const picker=h('select',{class:'input'},h('option',{value:''},'— Выберите участника —'),
       ...directory.map(p=>h('option',{value:p.key},p.name)));
     const info=h('div',{class:'msg'},'Выберите участника для проверки баланса');
-    const priceText=String(A.st.event.priceText||A.st.event.price||'250');
-    const price=Number(priceText.replace(/[^\\d]/g,''))||250;
+    const priceText=String(A.st.event.priceText||'');
+    const matched=priceText.trim().match(/^(\\d[\\d\\s]*)\\s*(?:₽|руб\\.?|рублей)?$/i);
+    const price=matched?Number(matched[1].replace(/\\s/g,'')):0;
     const update=()=>{
       const account=accounts.get(picker.value),balance=account?Number(account.balance):0,cost=price*nums.length;
       fill(info,h('b',null,'Баланс: '+balance+' ₽ · Списание: '+cost+' ₽'),
-        h('div',{class:'meta'},balance>=cost?'Средств достаточно':'Недостаточно средств для выбранных номерков'));
-      submit.disabled=!picker.value||balance<cost;
+        h('div',{class:'meta'},!price?'Не удалось определить цену из настроек эфира':balance>=cost?'Средств достаточно':'Недостаточно средств для выбранных номерков'));
+      submit.disabled=!picker.value||!price||balance<cost;
     };
     const submit=h('button',{class:'btn btn-primary btn-block',disabled:true,onclick:async()=>{
       const account=accounts.get(picker.value),cost=price*nums.length;
