@@ -1,5 +1,5 @@
 // Тестовая копия Google Apps Script для BOK Cabinet.
 // Не подменяйте адрес рабочим API без отдельного согласования.
 window.NOMEROK_CONFIG = {
-  API_URL: 'https://script.google.com/macros/s/AKfycbwtWD-c3B_kp-3HUSA-u2IG9cNUTbwBu1_OVBapm7E1HqKhjP-yCh8rLUNLdTueMYO-/exec'
+  API_URL: 'https://script.google.com/macros/s/AKfycbxm3lSC7pYyE52XOYgzpKKtozibJcTKBZyqs62mnZbByY4QEYrTRwMRPr7Vv7eRO4Mf/exec'
 };
