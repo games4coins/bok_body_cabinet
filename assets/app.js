@@ -36,7 +36,7 @@
   const layout = h('div', { class: 'layout' }, h('div', null, mineEl, gridCard), playersCard);
   const app = document.getElementById('app');
   fill(app, heroEl, bannerEl, stepsEl, layout,
-    h('div', { class: 'footer' }, 'Время указано по часовому поясу организатора. · версия сайта 6.1'));
+    h('div', { class: 'footer' }, 'Время указано по часовому поясу организатора.'));
   if (DEMO) document.getElementById('demo').appendChild(h('div', { class: 'demo-flag' },
     'Демо-режим: данные не сохраняются. Админка: admin.html, пароль demo. Укажите API_URL в config.js, чтобы подключить таблицу.'));
   if (window.matchMedia('(min-width: 700px)').matches) stepsEl.open = true;
@@ -351,8 +351,29 @@
         authenticated?freezeUI:action,depositUI,h('h4',null,'🎁 Подарки'),h('div',{class:'gift-list'},(p.gifts||[]).length?(p.gifts||[]).map(g=>h('div',{class:'gift-item'},h('b',null,g.title),' · ',g.received?'✅ Получен '+(g.receivedAt||''):'📦 Ожидает выдачи')):h('p',{class:'hint'},'Подарков пока нет')),
         h('p',{class:'hint'},authenticated?'Заморозка доступна после проверки VK ID сервером. Суммы пока условные.':'Без авторизации нельзя самостоятельно менять баланс или заморозку. Для оформления заявки откроются сообщения группы ВК.'));
     };
-    const draw=()=>{const t=norm(q.value.trim()).replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/^vk\.(?:com|ru)\//,'').replace(/\/$/,'');const arr=t.length>=2?players.filter(p=>norm(p.name).includes(t)||norm(p.url||'').includes(t)||norm(p.url||'').split('/').pop().includes(t)).slice(0,20):[];
-      fill(matches,arr.length?arr.map(p=>h('button',{class:'btn btn-soft btn-block',style:{marginTop:'6px'},onclick:()=>select(p)},p.name+' · 🎟 '+(p.bal==null?'—':p.bal))):h('p',{class:'hint'},t.length>=2?'Участник не найден. Попробуйте имя или числовой VK ID.':'Начните вводить имя или ссылку ВК.'));
+    let searchSeq=0;
+    const vkSlug=value=>{
+      let x=String(value||'').trim().toLowerCase().split('\\').join('/').replace(/^@/,'');
+      if(x.startsWith('https://'))x=x.slice(8);
+      if(x.startsWith('http://'))x=x.slice(7);
+      if(x.startsWith('www.'))x=x.slice(4);
+      if(x.startsWith('m.vk.com/'))x=x.slice(2);
+      if(x.startsWith('vk.com/')||x.startsWith('vk.ru/'))x=x.slice(x.indexOf('/')+1);
+      return x.split('?')[0].split('/')[0];
+    };
+    const draw=()=>{
+      const seq=++searchSeq,raw=q.value.trim(),t=vkSlug(raw);
+      const arr=t.length>=2?players.filter(p=>norm(p.name).includes(t)||vkSlug(p.url||'').includes(t)).slice(0,20):[];
+      fill(matches,arr.length?arr.map(p=>h('button',{class:'btn btn-soft btn-block',style:{marginTop:'6px'},onclick:()=>select(p)},p.name+' · 🎟 '+(p.bal==null?'—':p.bal))):h('p',{class:'hint'},t.length>=2?'Проверяем профиль…':'Начните вводить имя или ссылку ВК.'));
+      if(arr.length||t.length<2)return;
+      const looksVk=raw.includes('vk.')||raw.startsWith('@')||t.startsWith('id')||(/^[a-z0-9_.]{2,64}$/.test(t)&&!raw.includes(' '));
+      if(!looksVk){fill(matches,h('p',{class:'hint'},'Участник не найден.'));return;}
+      api.post('resolveCabinetVk',{vkUrl:raw}).then(r=>{
+        if(seq!==searchSeq)return;
+        if(!r||!r.ok){fill(matches,h('p',{class:'hint'},'Не удалось определить профиль ВК.'));return;}
+        const id='id'+r.vkId,found=players.filter(p=>vkSlug(p.url||'')===id);
+        fill(matches,found.length?found.map(p=>h('button',{class:'btn btn-soft btn-block',style:{marginTop:'6px'},onclick:()=>select(p)},p.name+' · 🎟 '+(p.bal==null?'—':p.bal))):h('p',{class:'hint'},'Профиль определён: '+id+'. В публичной базе соответствующая карточка пока не найдена.'));
+      }).catch(()=>{if(seq===searchSeq)fill(matches,h('p',{class:'hint'},'Ошибка проверки ВК'));});
     };
     const showSearch=(reset=false)=>{if(reset)q.value='';fill(box,h('p',{class:'lead'},'Публичные сведения. Вы можете просматривать карточки других участников.'),q,matches);draw();q.focus();};
     q.addEventListener('input',draw);
