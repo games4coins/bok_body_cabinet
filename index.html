@@ -1,36 +1,21 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#602b39"><title>ВОК — Личный кабинет</title>
-<style>
-*{box-sizing:border-box}body{margin:0;background:#f7f0e9;color:#30282a;font:16px system-ui,-apple-system,sans-serif}.wrap{max-width:650px;margin:auto;padding:25px 16px 70px}.hero{background:linear-gradient(135deg,#471b30,#913e40 65%,#ad6b42);border-radius:25px;color:white;padding:30px;box-shadow:0 14px 35px #5e28342c}.over{color:#f4d5a3;letter-spacing:.17em;font-size:12px;text-transform:uppercase}h1,h2{font-family:Georgia,serif}h1{font-size:clamp(32px,8vw,50px);margin:14px 0}h2{margin:0 0 12px}.hero p{color:#f7e6db;line-height:1.5}.card{background:white;border:1px solid #eadbd0;border-radius:22px;padding:24px;margin-top:20px;box-shadow:0 6px 18px #59372910}.muted{color:#756b69;line-height:1.5}.profile{display:flex;gap:18px;align-items:center}.avatar{width:110px;height:110px;object-fit:cover;border:4px solid #d9ad72;border-radius:50%;background:#f4ebe3}.name{font-weight:750;font-size:22px}.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:22px}.stat{background:#faf4ee;border-radius:14px;padding:18px}.stat strong{display:block;font-size:28px}.btn{border:0;border-radius:12px;background:#6f3042;color:white;font-weight:700;padding:13px 20px;cursor:pointer}.hidden{display:none!important}#status{font-size:14px;margin-top:12px;color:#87513d}a{color:#81394b}footer{text-align:center;color:#897b74;font-size:12px;margin-top:26px}
-</style></head><body><main class="wrap"><header class="hero"><div class="over">Мастерская шарнирных тел ВОК</div><h1>Личный кабинет</h1><p>Тестовая авторизация через ВКонтакте. Основной сервис бронирования и накопления участников не затрагиваются.</p></header>
-<section id="login" class="card"><h2>Вход через VK ID</h2><p class="muted">Войдите, чтобы увидеть имя и фотографию своего профиля. Пароль ВК на этом сайте не запрашивается.</p><div id="vk-login"></div><p id="status" role="status" aria-live="polite">Загрузка VK ID…</p></section>
-<section id="cabinet" class="card hidden"><div class="profile"><img id="avatar" class="avatar" alt="Аватар ВК"><div><div class="name" id="name"></div><a id="profile-link" rel="noopener noreferrer" target="_blank">Профиль ВК</a></div></div><div class="stats"><div class="stat"><span class="muted">Накопления</span><strong>—</strong><small>Пока не подключены</small></div><div class="stat"><span class="muted">Подарки</span><strong>—</strong><small>Пока не подключены</small></div></div><p class="muted">Это демонстрационный кабинет. Изменение баланса и управление заморозкой недоступны.</p><button class="btn" id="logout" type="button">Выйти</button></section><footer>BOK Body · тестовый модуль VK ID</footer></main>
-<script src="https://unpkg.com/@vkid/sdk@2/dist-sdk/umd/index.js"></script>
-<script>
-(()=>{'use strict';
-const status=document.getElementById('status'),VKID=window.VKIDSDK;
-const fail=e=>{console.error('VK ID error',e);status.textContent='Ошибка авторизации. Проверьте разрешённый Redirect URL в настройках VK ID и попробуйте снова.'};
-if(!VKID){status.textContent='Не удалось загрузить VK ID SDK.';return}
-try{
-VKID.Config.init({app:54901191,redirectUrl:'https://games4coins.github.io/bok_body_cabinet/',responseMode:VKID.ConfigResponseMode.Callback,source:VKID.ConfigSource.LOWCODE,scope:''});
-new VKID.OneTap().render({container:document.getElementById('vk-login'),showAlternativeLogin:true,styles:{height:46}})
-.on(VKID.WidgetEvents.ERROR,fail)
-.on(VKID.OneTapInternalEvents.LOGIN_SUCCESS,async payload=>{
-try{
-status.textContent='Выполняется вход…';
-const token=await VKID.Auth.exchangeCode(payload.code,payload.device_id);
-if(!token?.access_token)throw new Error('No access token');
-const result=await VKID.Auth.userInfo(token.access_token),u=result.user||result;
-if(!u?.user_id)throw new Error('No user info');
-document.getElementById('name').textContent=[u.first_name,u.last_name].filter(Boolean).join(' ')||'Участник ВК';
-const photo=document.getElementById('avatar');if(u.avatar)photo.src=u.avatar;else photo.alt='Фотография недоступна';
-const link=document.getElementById('profile-link');link.href='https://vk.com/id'+encodeURIComponent(String(u.user_id));link.textContent='vk.com/id'+u.user_id;
-document.getElementById('login').classList.add('hidden');document.getElementById('cabinet').classList.remove('hidden');
-// Access tokens are intentionally not persisted; server-side verification is required for real data.
-}catch(e){fail(e)}
-});
-status.textContent='Выберите вход через VK ID.';
-}catch(e){fail(e)}
-document.getElementById('logout').addEventListener('click',()=>location.reload());
-})();
-</script></body></html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#c4501c">
+  <title>Бронирование номерков</title>
+  <link rel="stylesheet" href="assets/styles.css?v=6.5">
+</head>
+<body>
+  <div id="demo"></div>
+  <main class="wrap" id="app">
+    <div class="card" style="margin-top:40px;text-align:center">Загрузка…</div>
+  </main>
+  <script src="config.js"></script>
+  <script src="assets/qrcode.js?v=6.5"></script>
+  <script src="assets/common.js?v=6.5"></script>
+  <script src="assets/vk-auth.js?v=6.5"></script>
+  <script src="assets/app.js?v=6.5"></script>
+</body>
+</html>
