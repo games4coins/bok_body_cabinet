@@ -272,8 +272,43 @@
           h('div', { style: { display: 'flex', gap: '8px', flex: 'none', flexWrap: 'wrap', justifyContent: 'flex-end' } },
             h('button', { class: 'btn btn-ghost btn-sm', onclick: () => { A.sel.clear(); renderTab(); } }, 'Сбросить'),
             h('button', { class: 'btn btn-soft btn-sm', onclick: blockSelected }, 'Заблокировать'),
-            h('button', { class: 'btn btn-primary btn-sm', onclick: openManual }, 'Назначить вручную'))) : null));
+            h('button', { class: 'btn btn-primary btn-sm', onclick: openManual }, 'Назначить вручную'),
+            h('button', { class: 'btn btn-primary btn-sm', onclick: openDepositFromGrid }, '💳 Списать с баланса'))) : null));
   }
+  async function openDepositFromGrid() {
+    const nums=Array.from(A.sel).sort((a,b)=>a-b);
+    if(!nums.length)return toast('Выберите свободные номерки','bad');
+    const [balances,players]=await Promise.all([act('adminDepositList'),act('adminPlayers')]);
+    if(!balances||!players)return;
+    const accounts=new Map((balances.players||[]).map(p=>[String(p.key),p]));
+    const directory=(players.players||[]).slice().sort((a,b)=>a.name.localeCompare(b.name,'ru'));
+    const picker=h('select',{class:'input'},h('option',{value:''},'— Выберите участника —'),
+      ...directory.map(p=>h('option',{value:p.key},p.name)));
+    const info=h('div',{class:'msg'},'Выберите участника для проверки баланса');
+    const priceText=String(A.st.event.priceText||A.st.event.price||'250');
+    const price=Number(priceText.replace(/[^\\d]/g,''))||250;
+    const update=()=>{
+      const account=accounts.get(picker.value),balance=account?Number(account.balance):0,cost=price*nums.length;
+      fill(info,h('b',null,'Баланс: '+balance+' ₽ · Списание: '+cost+' ₽'),
+        h('div',{class:'meta'},balance>=cost?'Средств достаточно':'Недостаточно средств для выбранных номерков'));
+      submit.disabled=!picker.value||balance<cost;
+    };
+    const submit=h('button',{class:'btn btn-primary btn-block',disabled:true,onclick:async()=>{
+      const account=accounts.get(picker.value),cost=price*nums.length;
+      if(!account||Number(account.balance)<cost)return toast('Недостаточно средств','bad');
+      if(!confirm('Назначить '+list(nums)+' участнику '+account.name+' и списать '+cost+' ₽ с ТЕСТОВОГО баланса?'))return;
+      submit.disabled=true;
+      const requestId='grid-'+Date.now()+'-'+Math.random().toString(36).slice(2);
+      const r=await act('adminDepositBook',{key:picker.value,numbers:nums,requestId:requestId,note:'Назначено из сетки админки'});
+      if(r){A.sel.clear();closeModal();toast('Тестовая бронь назначена');}
+      else submit.disabled=false;
+    }},'Назначить и списать с баланса');
+    picker.addEventListener('change',update);
+    openModal([h('h3',null,'💳 Бронирование из сетки'),
+      h('p',{class:'lead'},list(nums)+' · '+nums.length+' шт.'),
+      h('p',{class:'hint'},'Списание условных средств. Только для администратора.'),picker,info,submit]);
+  }
+
   function legend(bg, text) { return h('span', null, h('i', { style: { background: bg } }), text); }
 
   async function blockSelected() {
