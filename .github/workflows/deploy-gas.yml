@@ -1,0 +1,43 @@
+name: Deploy TEST Google Apps Script
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: bok-body-test-gas-deploy
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: test-gas
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate required files and secrets
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          GAS_DEPLOYMENT_ID: ${{ vars.GAS_DEPLOYMENT_ID }}
+        run: |
+          test -n "$CLASPRC_JSON" || { echo "::error::Missing CLASPRC_JSON secret"; exit 1; }
+          test -n "$GAS_DEPLOYMENT_ID" || { echo "::error::Missing GAS_DEPLOYMENT_ID variable"; exit 1; }
+          test -f gas/Code.gs || { echo "::error::Server files not imported yet: gas/Code.gs missing"; exit 1; }
+          test -f gas/Players.gs || { echo "::error::gas/Players.gs missing"; exit 1; }
+          test -f gas/appsscript.json
+      - name: Install clasp
+        run: npm install --global @google/clasp@3
+      - name: Configure Google credentials
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        run: |
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+      - name: Push test server source
+        run: clasp push --force
+      - name: Create immutable version
+        run: clasp version "BOK Body TEST ${{ github.sha }}"
+      - name: Update existing TEST deployment
+        env:
+          GAS_DEPLOYMENT_ID: ${{ vars.GAS_DEPLOYMENT_ID }}
+        run: clasp deploy --deploymentId "$GAS_DEPLOYMENT_ID" --description "BOK Body TEST ${{ github.sha }}"
