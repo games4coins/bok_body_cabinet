@@ -596,24 +596,46 @@
         h('div',{class:'gift-catalog-list'},...items.map(x=>h('div',{class:'gift-catalog-row'},h('span',null,x.title),h('button',{class:'btn btn-soft btn-sm',onclick:async()=>{const r=await act('adminGiftCatalogSet',{id:x.id,active:!x.active});if(r)renderCatalog(r.catalog);}},x.active?'Отключить':'Включить')))),
         h('div',{class:'gift-add-row'},newTitle,h('button',{class:'btn btn-soft',onclick:async()=>{if(!newTitle.value.trim())return toast('Введите название','bad');const r=await act('adminGiftCatalogAdd',{title:newTitle.value});if(r)renderCatalog(r.catalog);}},'Добавить в каталог')));
     };
+    let focusedKey=null;
+    const focusToggle=h('button',{class:'btn btn-soft btn-sm',onclick:()=>{focusedKey=null;renderList();}},'Показать всех участников');
+    const editGift=g=>{
+      const title=h('input',{class:'input',value:g.title,placeholder:'Название подарка'});
+      const eventInput=h('input',{class:'input',value:g.event||'',placeholder:'Номер эфира'});
+      const note=h('input',{class:'input',value:g.note||'',placeholder:'Комментарий'});
+      const form=h('div',{class:'gift-edit-panel'},
+        h('b',null,'Редактировать подарок · '+g.name),title,eventInput,note,
+        h('div',{class:'gift-add-row'},
+          h('button',{class:'btn btn-primary btn-sm',onclick:async()=>{
+            if(!title.value.trim())return toast('Укажите название подарка','bad');
+            if(!window.confirm('Заменить подарок «'+g.title+'» на «'+title.value.trim()+'»?'))return;
+            const r=await act('adminGiftEdit',{id:g.id,title:title.value.trim(),event:eventInput.value,note:note.value});
+            if(r){last=r.gifts;renderList();toast('Подарок исправлен');}
+          }},'Сохранить изменения'),
+          h('button',{class:'btn btn-soft btn-sm',onclick:()=>renderList()},'Отмена')));
+      fill(body,form);
+    };
     const renderList=()=>{
       const groups=new Map();for(const g of last){const id=g.key||g.name;if(!groups.has(id))groups.set(id,{name:g.name,gifts:[]});groups.get(id).gifts.push(g);}
-      const arr=Array.from(groups.entries()).sort((a,b)=>a[1].name.localeCompare(b[1].name,'ru'));
-      fill(body,arr.length?arr.map(([key,group])=>{
+      const arr=Array.from(groups.entries()).filter(([key])=>!focusedKey||key===focusedKey).sort((a,b)=>a[1].name.localeCompare(b[1].name,'ru'));
+      if(chosen&&groups.has(chosen.key)&&!focusedKey)arr.sort((a,b)=>(a[0]===chosen.key?-1:b[0]===chosen.key?1:0));
+      fill(body,focusedKey?h('div',{class:'gift-focus-bar'},'Показан один участник · ',focusToggle):null,arr.length?arr.map(([key,group])=>{
         const pending=group.gifts.filter(g=>!g.received).length,done=group.gifts.length-pending;
         return h('div',{class:'gift-player-group'},h('button',{class:'gift-player-head',onclick:()=>{expanded.has(key)?expanded.delete(key):expanded.add(key);renderList();}},
           h('span',null,(expanded.has(key)?'▾ ':'▸ ')+group.name),h('span',{class:'gift-counts'},'📦 Ожидают: '+pending+'   ·   ✅ Получено: '+done)),
+          h('button',{class:'btn btn-soft btn-sm',onclick:()=>{focusedKey=focusedKey===key?null:key;expanded.add(key);renderList();}},focusedKey===key?'Показать всех':'Только этот участник'),
           expanded.has(key)?h('div',{class:'gift-player-items'},...group.gifts.slice().reverse().map(g=>h('div',{class:'gift-item-row'},
             h('div',null,h('b',null,g.title),h('div',{class:'meta'},'Эфир №'+(g.event||'—')+' · '+(g.received?'Получен '+(g.receivedAt||''):'Ожидает выдачи'))),
-            h('button',{class:'btn btn-soft btn-sm',onclick:async()=>{const r=await act('adminGiftReceived',{id:g.id,received:!g.received});if(r){last=r.gifts;renderList();}}},g.received?'Отменить получение':'Отметить полученным')))):null);
+            h('div',{class:'gift-add-row'},
+              h('button',{class:'btn btn-soft btn-sm',onclick:()=>editGift(g)},'✏ Редактировать'),
+              h('button',{class:'btn btn-soft btn-sm',onclick:async()=>{const r=await act('adminGiftReceived',{id:g.id,received:!g.received});if(r){last=r.gifts;renderList();}}},g.received?'Отменить получение':'Отметить полученным'))))):null);
       }):h('p',{class:'hint'},'Подарков пока нет'));
     };
     const refresh=async()=>{const r=await act('adminGifts');if(!r)return;last=r.gifts||[];renderList();renderCatalog(r.catalog||[]);};
     const lookup=async()=>{if(!A.players){const r=await act('adminPlayers');if(!r)return;A.players=r.players;A.rules=r.rules;}
-      const q=norm(player.value.trim());fill(suggestions,q.length<2?null:A.players.filter(p=>norm(p.name).includes(q)||norm(p.url).includes(q)).slice(0,8).map(p=>h('button',{class:'btn btn-soft btn-block',onclick:()=>{chosen=p;player.value=p.name;fill(suggestions);}},p.name)));
+      const q=norm(player.value.trim());fill(suggestions,q.length<2?null:A.players.filter(p=>norm(p.name).includes(q)||norm(p.url).includes(q)).slice(0,8).map(p=>h('button',{class:'btn btn-soft btn-block',onclick:()=>{chosen=p;player.value=p.name;focusedKey=p.key;expanded.add(p.key);fill(suggestions);renderList();}},p.name)));
     };
     player.addEventListener('input',()=>{chosen=null;lookup();});
-    const add=h('button',{class:'btn btn-primary btn-block',onclick:async()=>{if(!chosen)return toast('Выберите участника из подсказок','bad');if(!catalogSelect.value)return toast('Выберите подарок','bad');const r=await act('adminGiftAdd',{key:chosen.key,catalogId:catalogSelect.value,event:event.value});if(r){last=r.gifts;expanded.add(chosen.key);renderList();toast('Подарок назначен');}}},'Назначить подарок');
+    const add=h('button',{class:'btn btn-primary btn-block',onclick:async()=>{if(!chosen)return toast('Выберите участника из подсказок','bad');if(!catalogSelect.value)return toast('Выберите подарок','bad');const r=await act('adminGiftAdd',{key:chosen.key,catalogId:catalogSelect.value,event:event.value});if(r){last=r.gifts;focusedKey=chosen.key;expanded.add(chosen.key);renderList();toast('Подарок назначен');}}},'Назначить подарок');
     refresh();return h('section',{class:'card'},h('h2',null,'🎁 Подарки участников'),h('p',{class:'hint'},'Нажмите на имя, чтобы увидеть все подарки участника. Получение подтверждается вручную.'),
       h('div',{class:'gift-assignment'},h('h3',null,'Назначить подарок'),player,suggestions,catalogSelect,event,add),h('h3',null,'Участники с подарками'),body,
       h('details',{class:'gift-catalog-panel'},h('summary',null,'⚙ Управление каталогом подарков'),catalogBox));
