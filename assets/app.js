@@ -298,15 +298,16 @@
     const players=r.players||[],rules=r.rules||{},contact=safeUrl(rules.contactUrl);
     const q=h('input',{class:'input',type:'search',placeholder:'Имя или ссылка ВК',value:store('nomerok_cabinet')||store('nomerok_vk')||'',autocomplete:'off'});
     const matches=h('div');
+    const verifiedSession=identity&&window.BokVK&&window.BokVK.token&&window.BokVK.token()?await api.post('vkCabinetState',{vkAccessToken:window.BokVK.token()}):null;
     const select=async p=>{
       store('nomerok_cabinet',p.url||p.name);
       const left=p.freezeTo?Math.max(0,Math.ceil((p.freezeTo-Date.now())/86400000)):null;
       const eligible=typeof p.bal==='number'&&p.bal>=10;
       const buttonText=p.frozen?'Запросить досрочную разморозку (−1 номерок)':'Запросить заморозку';
       const action=contact&&((p.frozen)||eligible)?h('a',{class:'btn btn-primary btn-block',href:contact,target:'_blank',rel:'noopener noreferrer'},buttonText):h('button',{class:'btn btn-soft btn-block',disabled:true,title:'Для заморозки требуется баланс не менее 10 номерков'},'Заморозка доступна от 10 номерков');
-      const authenticated=!!identity && String(p.url||'').toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/^vk\.(?:com|ru)\//,'').replace(/\/$/,'')==='id'+identity.id;
+      const authenticated=!!identity && ((verifiedSession&&verifiedSession.ok&&verifiedSession.verified&&verifiedSession.player&&verifiedSession.player.url===p.url)||(String(p.url||'').toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/^vk\.(?:com|ru)\//,'').replace(/\/$/,'')==='id'+identity.id));
       const token=window.BokVK&&window.BokVK.token&&window.BokVK.token();
-      const privateData=authenticated&&token?await api.post('vkCabinetState',{vkAccessToken:token}):null;
+      const privateData=authenticated&&token?verifiedSession:null;
       const verified=!!(privateData&&privateData.ok&&privateData.verified);
       const privatePlayer=verified?privateData.player:null;
       const privateDeposit=verified?privateData.deposit:null;
@@ -355,7 +356,7 @@
     };
     const showSearch=()=>{q.value='';fill(box,h('p',{class:'lead'},'Публичные сведения. Вы можете просматривать карточки других участников.'),q,matches);draw();q.focus();};
     q.addEventListener('input',draw);
-    const known=players.find(p=>{
+    const known=players.find(p=>verifiedSession&&verifiedSession.ok&&verifiedSession.player&&verifiedSession.player.url===p.url)||players.find(p=>{
       const url=String(p.url||'').toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/^vk\.(?:com|ru)\//,'').replace(/\/$/,'');
       return identity&&url==='id'+identity.id;
     });
