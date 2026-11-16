@@ -370,7 +370,7 @@
       if(!looksVk){fill(matches,h('p',{class:'hint'},'Участник не найден.'));return;}
       api.post('resolveCabinetVk',{vkUrl:raw}).then(r=>{
         if(seq!==searchSeq)return;
-        if(!r||!r.ok){fill(matches,h('p',{class:'hint'},'Не удалось определить профиль ВК.'));return;}
+        if(!r||!r.ok){const msg=r&&r.error&&(r.error.message||r.error)||'';fill(matches,h('p',{class:'hint'},String(msg).includes('Неизвестное действие')?'Сервер не поддерживает поиск VK ID. Обновите развёртывание Apps Script.':msg||'Не удалось определить профиль ВК.'));return;}
         const id='id'+r.vkId,found=players.filter(p=>vkSlug(p.url||'')===id||(r.linkedUrl&&vkSlug(p.url||'')===vkSlug(r.linkedUrl)));
         fill(matches,found.length?found.map(p=>h('button',{class:'btn btn-soft btn-block',style:{marginTop:'6px'},onclick:()=>select(p)},p.name+' · 🎟 '+(p.bal==null?'—':p.bal))):h('p',{class:'hint'},'Профиль определён: '+id+'. В публичной базе соответствующая карточка пока не найдена.'));
       }).catch(()=>{if(seq===searchSeq)fill(matches,h('p',{class:'hint'},'Ошибка проверки ВК'));});
