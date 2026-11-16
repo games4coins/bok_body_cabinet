@@ -4,6 +4,12 @@
 const APP_ID=54901191;
 const REDIRECT='https://games4coins.github.io/bok_body_cabinet/';
 let current=null;
+const CACHE_KEY='bok_vkid_profile_v1';
+try {
+ const raw=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');
+ if(raw && /^\d+$/.test(String(raw.id)) && raw.name && raw.url) current={...raw,restored:true};
+} catch(_) {}
+
 function sdk(){
  return new Promise((resolve,reject)=>{
   if(global.VKIDSDK)return resolve(global.VKIDSDK);
@@ -15,6 +21,7 @@ function sdk(){
  });
 }
 function profile(){return current;}
+// A restored profile is display-only, not proof of current authorization.
 async function mount(container, onSuccess, onError){
  try{
   const VKID=await sdk();
@@ -29,13 +36,14 @@ async function mount(container, onSuccess, onError){
      const data=await VKID.Auth.userInfo(result.access_token);
      const u=data.user||data;
      if(!u||!u.user_id)throw Error('Не получен профиль VK');
-     current={id:String(u.user_id),name:[u.first_name,u.last_name].filter(Boolean).join(' '),avatar:u.avatar||'',url:'https://vk.com/id'+u.user_id};
+     current={id:String(u.user_id),name:[u.first_name,u.last_name].filter(Boolean).join(' '),avatar:u.avatar||'',url:'https://vk.com/id'+u.user_id,restored:false};
+     try {localStorage.setItem(CACHE_KEY,JSON.stringify(current));} catch(_) {}
      // No access token is persisted or sent to the existing booking API.
      onSuccess(current);
     }catch(e){onError(e);}
    });
  }catch(e){onError(e);}
 }
-function logout(){current=null;}
+function logout(){current=null;try{localStorage.removeItem(CACHE_KEY);}catch(_){}}
 global.BokVK={mount,profile,logout,appId:APP_ID};
 })(window);
