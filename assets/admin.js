@@ -665,9 +665,33 @@
         h('h3',null,current?current.name+' · '+(current.balance||0)+' ₽':'Операции с условным балансом'),
         key,amount,note,credit,nums,book,h('h4',null,'Привязка старых VK-профилей'),h('p',{class:'hint'},'Выберите участника и введите его числовой VK ID. Старая ссылка и история останутся без изменений. Не связывайте по одному только имени.'),vkId,linkBtn,h('h4',null,'История'),...history);
     }
+    const migration=h('div',{class:'card',style:{marginTop:'16px'}});
+    let migrationOffset=0;
+    const migrationRows=h('div');
+    const scan=h('button',{class:'btn btn-soft btn-block',onclick:async()=>{
+      scan.disabled=true;
+      const r=await act('adminVkMigrationPreview',{offset:migrationOffset});
+      scan.disabled=false;
+      if(!r)return;
+      migrationOffset=r.nextOffset;
+      const rows=(r.items||[]).map(p=>{
+        const status=h('span',{class:'meta'},p.status==='resolved'?'VK ID: '+p.vkId:'Не удалось определить VK ID');
+        const apply=h('button',{class:'btn btn-soft btn-sm',disabled:p.status!=='resolved',onclick:async()=>{
+          if(!confirm('Проверили, что «'+p.name+'» действительно владелец '+p.oldUrl+'? Связать с VK ID '+p.vkId+'?'))return;
+          const result=await act('adminVkMigrationApply',{key:p.key,vkId:p.vkId});
+          if(result){apply.disabled=true;apply.textContent='Привязан ✓';}
+        }},'Подтвердить привязку');
+        return h('div',{class:'gift-item-row'},h('b',null,p.name),h('div',{class:'meta'},p.oldUrl),status,apply);
+      });
+      migrationRows.append(...rows);
+      scan.textContent=migrationOffset>=r.total?'Проверка завершена':'Проверить следующие 10 записей';
+      scan.disabled=migrationOffset>=r.total;
+    }},'Проверить первые 10 записей');
+    fill(migration,h('h3',null,'🔗 Проверка старых никнеймов'),h('p',{class:'hint'},'Сверка через VK API без изменения записей. Подтверждайте только проверенные профили: никнейм мог сменить владельца.'),scan,migrationRows);
+    body.parentNode&&body.parentNode.appendChild(migration);
     search.addEventListener('input',draw);positive.addEventListener('change',draw);
     refresh();
-    return h('section',{class:'card'},h('h2',null,'💳 Тестовые балансы'),h('p',{class:'hint'},'Только условные суммы. Не принимайте реальные платежи через этот модуль.'),body);
+    return h('section',{class:'card'},h('h2',null,'💳 Тестовые балансы'),h('p',{class:'hint'},'Только условные суммы. Не принимайте реальные платежи через этот модуль.'),body,migration);
   }
 
   function giftsView() {
