@@ -588,14 +588,16 @@
   function depositsView() {
     const body=h('div'),search=h('input',{class:'input',type:'search',placeholder:'Поиск участника'});
     const positive=h('input',{type:'checkbox',checked:true});
-    let accounts=[],selected=null;
+    let accounts=[],selected=null,playerDirectory=[];
     const newId=()=>String(Date.now())+'-'+Math.random().toString(36).slice(2);
-    const refresh=async()=>{const r=await act('adminDepositList');if(r){accounts=r.players||[];draw();}};
+    const refresh=async()=>{const [r,p]=await Promise.all([act('adminDepositList'),act('adminPlayers')]);if(p)playerDirectory=p.players||[];if(r){accounts=r.players||[];draw();}};
     function draw(){
       const rows=accounts.filter(p=>(!positive.checked||p.balance>0)&&norm(p.name).includes(norm(search.value)));
+      const newPlayers=positive.checked?[]:playerDirectory.filter(p=>!accounts.some(a=>a.key===p.key)&&norm(p.name).includes(norm(search.value))).map(p=>({key:p.key,name:p.name,balance:0,history:[]}));
+      rows.push(...newPlayers);
       const cards=rows.map(p=>h('button',{class:'btn btn-soft btn-block',style:{marginTop:'7px',textAlign:'left'},onclick:()=>{selected=p;draw();}},p.name+' · '+p.balance+' ₽'));
       const current=selected&&accounts.find(p=>p.key===selected.key);
-      const key=h('input',{class:'input',value:current?current.key:'',placeholder:'Ключ игрока из раздела Игроки'});
+      const key=h('select',{class:'input'},h('option',{value:''},'— Выберите участника —'),...playerDirectory.map(p=>h('option',{value:p.key,selected:!!current&&p.key===current.key},p.name)));
       const amount=h('input',{class:'input',type:'number',min:'1',placeholder:'Сумма пополнения, ₽'});
       const nums=h('input',{class:'input',placeholder:'Номерки через запятую: 2, 8, 15'});
       const note=h('input',{class:'input',placeholder:'Комментарий'});
