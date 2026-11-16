@@ -344,7 +344,7 @@
             h('div',{class:'meta'},String(op.date).slice(0,10)+' · Эфир №'+(op.event||'—')+' · '+(op.numbers||'')+' · '+(op.note||'')))):[h('p',{class:'hint'},'Операций пока нет')])):
           h('p',{class:'hint'},'Баланс доступен после серверной проверки VK ID.')
       ):null;
-      fill(box,h('button',{class:'btn btn-ghost btn-sm',onclick:()=>showSearch()},'← Сменить участника'),
+      fill(box,h('button',{class:'btn btn-ghost btn-sm',onclick:()=>showSearch(true)},'← Сменить участника'),
         h('div',{class:'cab-profile'},avatar(p.name,p.photo,112),h('div',null,h('h3',{class:p.frozen?'frozen-name':''},p.name),h('p',{class:'meta'},authenticated?(identity.restored?'VK ID · вход сохранён на устройстве':'VK ID · вход выполнен'):'Публичная карточка · без авторизации'))),
         h('div',{class:'cab-stats'},h('div',null,'🎟 Баланс: ',h('b',null,p.bal==null?'Скрыт':p.bal)),h('div',null,'❌ Пропуски: ',h('b',null,p.miss)),h('div',null,'🏆 Победы: ',h('b',null,p.wins||0)),h('div',null,p.frozen?'❄ Заморожен':'Активен')),
         p.frozen?h('p',{class:'msg'},left===null?'❄ Бессрочная заморозка по старым правилам':'❄ До бесплатной разморозки осталось '+left+' дн.'):h('p',{class:'hint'},'Доступная заморозка: '+(rules.freezeMinDays||1)+'–'+(rules.freezeMaxDays||90)+' дней. Запрос обрабатывает администратор.'),
@@ -352,9 +352,9 @@
         h('p',{class:'hint'},authenticated?'Заморозка доступна после проверки VK ID сервером. Суммы пока условные.':'Без авторизации нельзя самостоятельно менять баланс или заморозку. Для оформления заявки откроются сообщения группы ВК.'));
     };
     const draw=()=>{const t=norm(q.value.trim()).replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/^vk\.(?:com|ru)\//,'').replace(/\/$/,'');const arr=t.length>=2?players.filter(p=>norm(p.name).includes(t)||norm(p.url||'').includes(t)||norm(p.url||'').split('/').pop().includes(t)).slice(0,20):[];
-      fill(matches,arr.length?arr.map(p=>h('button',{class:'btn btn-soft btn-block',style:{marginTop:'6px'},onclick:()=>select(p)},p.name+' · 🎟 '+(p.bal==null?'—':p.bal))):h('p',{class:'hint'},'Начните вводить имя или ссылку ВК.'));
+      fill(matches,arr.length?arr.map(p=>h('button',{class:'btn btn-soft btn-block',style:{marginTop:'6px'},onclick:()=>select(p)},p.name+' · 🎟 '+(p.bal==null?'—':p.bal))):h('p',{class:'hint'},t.length>=2?'Участник не найден. Попробуйте имя или числовой VK ID.':'Начните вводить имя или ссылку ВК.'));
     };
-    const showSearch=()=>{q.value='';fill(box,h('p',{class:'lead'},'Публичные сведения. Вы можете просматривать карточки других участников.'),q,matches);draw();q.focus();};
+    const showSearch=(reset=false)=>{if(reset)q.value='';fill(box,h('p',{class:'lead'},'Публичные сведения. Вы можете просматривать карточки других участников.'),q,matches);draw();q.focus();};
     q.addEventListener('input',draw);
     const known=players.find(p=>verifiedSession&&verifiedSession.ok&&verifiedSession.player&&verifiedSession.player.url===p.url)||players.find(p=>{
       const url=String(p.url||'').toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/^vk\.(?:com|ru)\//,'').replace(/\/$/,'');
@@ -362,7 +362,7 @@
     });
     if(known)select(known);
     else if(identity) fill(box,h('div',{class:'banner info'},'Вы вошли как '+identity.name+'. Ссылка vk.com/id'+identity.id+' не найдена в публичной базе.'));
-    else showSearch();
+    else showSearch(false);
     if(identity)box.appendChild(h('button',{class:'btn btn-ghost btn-sm',style:{marginTop:'14px'},onclick:()=>{window.BokVK.logout();closeModal();openCabinet();}},'Выйти из VK ID'));
   }
 
