@@ -662,7 +662,7 @@
       const history=current?(current.history||[]).map(op=>h('div',{class:'gift-item-row'},h('b',null,(op.amount>0?'+':'')+op.amount+' ₽ · '+op.type),h('div',{class:'meta'},String(op.date).slice(0,10)+' · № '+op.numbers+' · '+op.note))):[];
       fill(body,h('div',{class:'gift-add-row'},search,h('label',null,positive,'Только с остатком')),
         h('div',null,...cards),
-        h('h3',null,current?current.name+' · '+current.balance+' ₽':'Операции с условным балансом'),
+        h('h3',null,current?current.name+' · '+(current.balance||0)+' ₽':'Операции с условным балансом'),
         key,amount,note,credit,nums,book,h('h4',null,'Привязка старых VK-профилей'),h('p',{class:'hint'},'Выберите участника и введите его числовой VK ID. Старая ссылка и история останутся без изменений. Не связывайте по одному только имени.'),vkId,linkBtn,h('h4',null,'История'),...history);
     }
     search.addEventListener('input',draw);positive.addEventListener('change',draw);
